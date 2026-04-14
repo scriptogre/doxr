@@ -4,14 +4,17 @@
     <vendor url="https://github.com/scriptogre/doxr">doxr</vendor>
 
     <description><![CDATA[
-        Docstring cross-reference checker for Python. Validates that
+        Docstring cross-reference navigation for Python. Makes
         <code>[text][pkg.mod.Class]</code> (MkDocs) and
-        <code>:class:`pkg.mod.Class`</code> (Sphinx) references in your
-        docstrings point to real symbols — with Ctrl+Click navigation.
-
-        Powered by the doxr language server.
+        <code>:class:`pkg.mod.Class`</code> (Sphinx) references in docstrings
+        Ctrl+Clickable — just like import statements.
     ]]></description>
 
     <depends>com.intellij.modules.python</depends>
-    <depends optional="true" config-file="doxr-lsp.xml">com.intellij.modules.lsp</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <psi.referenceContributor
+                language="Python"
+                implementation="com.doxr.intellij.DoxrReferenceContributor"/>
+    </extensions>
 </idea-plugin>

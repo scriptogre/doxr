@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.doxr.intellij"
-version = "0.1.0"
+version = "0.2.0"
 
 repositories {
     mavenCentral()
@@ -16,7 +16,8 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        pycharm("2025.1")
+        pycharmCommunity("2025.1")
+        bundledPlugin("PythonCore")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
 }
@@ -25,19 +26,25 @@ intellijPlatform {
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "251"
+            untilBuild = provider { null }
         }
     }
 }
 
 tasks {
-    withType<JavaCompile> {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
+    buildSearchableOptions {
+        enabled = false
+    }
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
 kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }

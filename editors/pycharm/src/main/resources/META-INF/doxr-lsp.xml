@@ -1,5 +1,0 @@
-<idea-plugin>
-    <extensions defaultExtensionNs="com.intellij.platform.lsp">
-        <serverSupportProvider implementation="com.doxr.intellij.DoxrLspServerSupportProvider"/>
-    </extensions>
-</idea-plugin>
