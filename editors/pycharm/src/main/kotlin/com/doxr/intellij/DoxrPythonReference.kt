@@ -22,7 +22,7 @@ class DoxrPythonReference(
     element: PyStringLiteralExpression,
     range: TextRange,
     private val qualifiedName: String,
-) : PsiReferenceBase<PyStringLiteralExpression>(element, range, true) {
+) : PsiReferenceBase<PyStringLiteralExpression>(element, range, /* soft = */ false) {
 
     override fun resolve(): PsiElement? {
         val project = element.project

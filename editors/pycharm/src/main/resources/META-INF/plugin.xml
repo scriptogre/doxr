@@ -16,5 +16,8 @@
         <psi.referenceContributor
                 language="Python"
                 implementation="com.doxr.intellij.DoxrReferenceContributor"/>
+        <annotator
+                language="Python"
+                implementation="com.doxr.intellij.DoxrAnnotator"/>
     </extensions>
 </idea-plugin>
