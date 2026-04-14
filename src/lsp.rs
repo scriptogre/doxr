@@ -34,6 +34,9 @@ fn uri_to_path(uri: &Uri) -> Option<PathBuf> {
 
 /// Run the LSP server on stdio.
 pub fn run() -> Result<()> {
+    // Ensure Ctrl+C kills the process cleanly.
+    ctrlc::set_handler(|| std::process::exit(0))?;
+
     let (connection, io_threads) = Connection::stdio();
 
     let server_capabilities = serde_json::to_value(ServerCapabilities {
