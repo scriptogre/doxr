@@ -24,13 +24,13 @@ An extremely fast Python docstring cross-reference checker, written in Rust.
 uvx doxr .
 ```
 
-That's it. No config needed. Auto-detects your src layout and doc style.
-
 ```
 src/my_pkg/models.py:12:5: DXR001 Unresolved reference `my_pkg.old_module.Foo`
 src/my_pkg/views.py:45:9: DXR001 Unresolved reference `Nonexistent`
 Found 2 errors.
 ```
+
+That's it. No config needed. Auto-detects your src layout and doc style.
 
 ## Supported syntax
 
