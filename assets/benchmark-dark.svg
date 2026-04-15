@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180">
+  <rect width="640" height="180" rx="8" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="320.0" y="28" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="600" fill="#e6edf3" text-anchor="middle">Validating cross-references in tinygrad (697 Python files)</text>
+  <text x="320.0" y="46" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8b949e" text-anchor="middle">~460x faster</text>
+  <text x="188" y="81.0" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#e6edf3" text-anchor="end">doxr</text>
+  <rect x="200" y="60" width="400" height="32" rx="4" fill="#161b22"/>
+  <rect x="200" y="60" width="4.0" height="32" rx="4" fill="#4ade80"/>
+  <text x="212" y="81.0" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#8b949e">110ms</text>
+  <text x="188" y="137.0" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#e6edf3" text-anchor="end">mkdocs build --strict</text>
+  <rect x="200" y="116" width="400" height="32" rx="4" fill="#161b22"/>
+  <rect x="200" y="116" width="400.0" height="32" rx="4" fill="#6b7280"/>
+  <text x="608.0" y="137.0" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#8b949e">51.0s</text>
+</svg>

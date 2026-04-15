@@ -6,7 +6,13 @@
 
 An extremely fast Python docstring cross-reference checker, written in Rust.
 
-[~460x faster](BENCHMARKS.md) than catching broken references via `mkdocs build --strict`.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/benchmark-light.svg">
+    <img alt="Benchmark: doxr is ~460x faster than mkdocs build --strict on tinygrad" src="assets/benchmark-light.svg" width="640">
+  </picture>
+</p>
 
 ```bash
 $ uvx doxr .
