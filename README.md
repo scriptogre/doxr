@@ -8,12 +8,12 @@ An extremely fast Python docstring cross-reference checker, written in Rust.
 
 ## Highlights
 
-- Validates cross-references against source code directly, no docs build required
-- Works out of the box with zero configuration
+- Validates against source code directly — **no docs build** required
+- **Zero config** — auto-detects src layout and doc style
 - Supports MkDocs, Sphinx, and Rust-style `[Symbol]` syntax
-- Resolves re-exports, inheritance chains, and `self.x` attributes
-- Outputs in Ruff's format for seamless CI integration
-- PyCharm plugin with Ctrl+Click navigation and squiggles on broken refs
+- Resolves re-exports, inheritance, and `self.x` attributes
+- Ruff-compatible output for **CI integration**
+- PyCharm plugin with **Ctrl+Click** and squiggles
 
 ## Getting Started
 
