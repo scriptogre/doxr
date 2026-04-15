@@ -5,13 +5,13 @@ BENCHMARKS = [
     {"label": "mkdocs build --strict", "seconds": 51.0, "bold": False},
 ]
 
-CAPTION = "Validating cross-references in tinygrad (697 Python files)"
+CAPTION = None  # Caption is in the README, not the SVG
 
 
 def format_time(s: float) -> str:
-    if s < 1:
-        return f"{s * 1000:.0f}ms"
-    return f"{s:.1f}s"
+    if s == 0:
+        return "0s"
+    return f"{s:.2f}s" if s < 1 else f"{s:.1f}s"
 
 
 def generate_svg(dark: bool) -> str:
@@ -30,7 +30,7 @@ def generate_svg(dark: bool) -> str:
     bar_gap = 28
     chart_height = len(BENCHMARKS) * (bar_height + bar_gap) - bar_gap + 10
     axis_height = 25
-    caption_height = 20
+    caption_height = 20 if CAPTION else 0
     total_height = top_margin + chart_height + axis_height + caption_height
 
     max_seconds = max(b["seconds"] for b in BENCHMARKS)
@@ -92,10 +92,10 @@ def generate_svg(dark: bool) -> str:
 
     svg += "  </g>\n"
 
-    # Caption
-    svg += f'  <text x="{width / 2}" y="{total_height - 2}" text-anchor="middle" '
-    svg += f'font-family="{font}" font-size="11px" fill="{text_color}" opacity="0.6">'
-    svg += f'{CAPTION}</text>\n'
+    if CAPTION:
+        svg += f'  <text x="{width / 2}" y="{total_height - 2}" text-anchor="middle" '
+        svg += f'font-family="{font}" font-size="11px" fill="{text_color}" opacity="0.6">'
+        svg += f'{CAPTION}</text>\n'
 
     svg += "</svg>\n"
     return svg

@@ -7,11 +7,15 @@
 An extremely fast Python docstring cross-reference checker, written in Rust.
 
 <p align="center">
-  <picture>
+  <picture align="center">
     <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="assets/benchmark-light.svg">
-    <img alt="Benchmark: doxr is ~460x faster than mkdocs build --strict on tinygrad" src="assets/benchmark-light.svg" width="640">
+    <img alt="Shows a bar chart with benchmark results." src="assets/benchmark-light.svg">
   </picture>
+</p>
+
+<p align="center">
+  <i>Validating cross-references in <a href="https://github.com/tinygrad/tinygrad">tinygrad</a> (697 Python files). <a href="BENCHMARKS.md">~460x faster.</a></i>
 </p>
 
 ```bash
