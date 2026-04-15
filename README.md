@@ -28,8 +28,8 @@ Found 2 errors.
 ## Highlights
 
 - Checks docstring cross-references without building docs
-- Works out of the box, no config needed
-- MkDocs, Sphinx, and Rust-style `[Symbol]` syntax
+- No config needed
+- MkDocs, Sphinx, and `[Symbol]` syntax
 - Follows re-exports and inheritance chains
 - Drops into any CI pipeline (Ruff output format)
 - PyCharm plugin: Ctrl+Click, squiggles, highlighting
