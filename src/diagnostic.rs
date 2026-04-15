@@ -1,6 +1,6 @@
 /// Diagnostics: validate references and emit Ruff-format output.
 use crate::config::DoxrConfig;
-use crate::extract::{extract_references, Reference};
+use crate::extract::{extract_references, Reference, ReferenceKind};
 use crate::graph::SymbolGraph;
 use crate::inventory::Inventory;
 use std::path::Path;
@@ -47,29 +47,56 @@ pub fn check(
                     continue;
                 }
 
-                let internal = is_internal(&r, graph);
+                // Expand short names to fully-qualified paths.
+                let (target, is_short) = match r.kind {
+                    ReferenceKind::ShortName => {
+                        match expand_short_name(&r.target, module) {
+                            Some(fqn) => (fqn, true),
+                            None => {
+                                // Short name not in scope — error.
+                                diagnostics.push(Diagnostic {
+                                    file: file_path.clone(),
+                                    line: docstring.line,
+                                    col: docstring.col,
+                                    code: "DXR001",
+                                    message: format!("Unresolved reference `{}`", r.target),
+                                });
+                                continue;
+                            }
+                        }
+                    }
+                    ReferenceKind::FullyQualified => (r.target.clone(), false),
+                };
+
+                let internal = is_internal(&target, graph);
 
                 if internal {
                     // Internal ref: must resolve in our symbol graph.
-                    if !graph.resolve(&r.target) {
+                    if !graph.resolve(&target) {
                         diagnostics.push(Diagnostic {
                             file: file_path.clone(),
                             line: docstring.line,
                             col: docstring.col,
                             code: "DXR001",
-                            message: format!("Unresolved reference `{}`", r.target),
+                            message: format!(
+                                "Unresolved reference `{}`",
+                                if is_short { &r.target } else { &target }
+                            ),
                         });
                     }
-                } else if inventory.covers_root(&r.target) {
+                } else if inventory.covers_root(&target) {
                     // External ref whose root module is covered by an inventory:
                     // check it. If the root isn't covered, silently skip.
-                    if !inventory.contains(&r.target) {
+                    if !inventory.contains(&target) {
                         diagnostics.push(Diagnostic {
                             file: file_path.clone(),
                             line: docstring.line,
                             col: docstring.col,
                             code: "DXR001",
-                            message: format!("Unresolved reference `{}`", r.target),
+                            message: format!(
+                                "Unresolved reference `{}`",
+                                if is_short { &r.target } else { &target }
+                            ),
                         });
                     }
                 }
@@ -98,12 +125,31 @@ fn is_explicitly_skipped(reference: &Reference, config: &DoxrConfig) -> bool {
     })
 }
 
-/// Check if a reference's root module is part of the project we're checking.
-fn is_internal(reference: &Reference, graph: &SymbolGraph) -> bool {
-    let root = reference.target.split('.').next().unwrap_or("");
+/// Check if a target's root module is part of the project we're checking.
+fn is_internal(target: &str, graph: &SymbolGraph) -> bool {
+    let root = target.split('.').next().unwrap_or("");
     graph.modules.keys().any(|path| {
         path == root || path.starts_with(&format!("{root}."))
     })
+}
+
+/// Expand a short name (e.g. `User`) to a fully-qualified path using the
+/// module's imports and definitions. Returns `None` if the name isn't in scope.
+fn expand_short_name(name: &str, module: &crate::graph::Module) -> Option<String> {
+    // 1. Check imports.
+    for imp in &module.imports {
+        let local_name = imp.alias.as_deref().unwrap_or(&imp.name);
+        if local_name == name {
+            return Some(format!("{}.{}", imp.source, imp.name));
+        }
+    }
+
+    // 2. Check local definitions.
+    if module.definitions.contains_key(name) {
+        return Some(format!("{}.{}", module.path, name));
+    }
+
+    None
 }
 
 /// Format diagnostics as a summary line.

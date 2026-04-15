@@ -149,10 +149,13 @@ fn extract_native(content: &str, existing_offsets: &[usize]) -> Vec<Reference> {
         let start = full_match.start();
         let end = full_match.end();
 
-        // Skip if preceded by \ (escaped) or ] (MkDocs [text][path] second part).
+        // Skip if preceded by:
+        // - \ (escaped)
+        // - ] (MkDocs [text][path] second part)
+        // - word char (subscript like AbstractBase[int], not a cross-reference)
         if start > 0 {
             let prev = bytes[start - 1];
-            if prev == b'\\' || prev == b']' {
+            if prev == b'\\' || prev == b']' || prev.is_ascii_alphanumeric() || prev == b'_' {
                 continue;
             }
         }
