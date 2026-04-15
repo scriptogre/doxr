@@ -8,9 +8,9 @@ An extremely fast Python docstring cross-reference checker, written in Rust.
 
 <p align="center">
   <picture align="center">
-    <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="assets/benchmark-light.svg">
-    <img alt="Shows a bar chart with benchmark results." src="assets/benchmark-light.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-dark-v2.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/benchmark-light-v2.svg">
+    <img alt="Shows a bar chart with benchmark results." src="assets/benchmark-light-v2.svg">
   </picture>
 </p>
 
