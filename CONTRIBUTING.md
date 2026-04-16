@@ -9,7 +9,7 @@
 ## Development Setup
 
 ```bash
-git clone https://github.com/scriptogre/doxr.git
+git clone https://github.com/scriptogre/drefs.git
 cd drefs
 cargo build
 ```

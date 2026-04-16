@@ -1,6 +1,6 @@
 # drefs
 
-[![CI](https://github.com/scriptogre/doxr/actions/workflows/ci.yml/badge.svg)](https://github.com/scriptogre/doxr/actions/workflows/ci.yml)
+[![CI](https://github.com/scriptogre/drefs/actions/workflows/ci.yml/badge.svg)](https://github.com/scriptogre/drefs/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/drefs.svg)](https://pypi.org/project/drefs/)
 [![Python versions](https://img.shields.io/pypi/pyversions/drefs.svg)](https://pypi.org/project/drefs/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)

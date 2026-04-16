@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.drefs.intellij</id>
     <name>drefs</name>
-    <vendor url="https://github.com/scriptogre/doxr">drefs</vendor>
+    <vendor url="https://github.com/scriptogre/drefs">drefs</vendor>
 
     <description><![CDATA[
         Docstring cross-reference navigation for Python. Makes
