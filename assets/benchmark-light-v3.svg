@@ -4,7 +4,7 @@
     <line x1="123.3" y1="0" x2="123.3" y2="70" stroke="rgba(127,127,127,0.2)" stroke-width="1"/>
     <line x1="246.7" y1="0" x2="246.7" y2="70" stroke="rgba(127,127,127,0.2)" stroke-width="1"/>
     <line x1="370.0" y1="0" x2="370.0" y2="70" stroke="rgba(127,127,127,0.2)" stroke-width="1"/>
-    <text x="-12" y="17.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Helvetica,Arial,sans-serif" font-size="13px" fill="#24292f" font-weight="bold">doxr</text>
+    <text x="-12" y="17.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Helvetica,Arial,sans-serif" font-size="13px" fill="#24292f" font-weight="bold">drefs</text>
     <rect x="0" y="5" width="2.0" height="16" rx="2" fill="#d97706"/>
     <text x="8.0" y="17.0" text-anchor="start" font-family="-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Helvetica,Arial,sans-serif" font-size="12px" fill="#24292f" font-weight="bold">0.11s</text>
     <text x="-12" y="61.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Helvetica,Arial,sans-serif" font-size="13px" fill="#24292f">mkdocs build --strict</text>

@@ -1,11 +1,9 @@
 """Generate benchmark bar chart SVGs matching ruff's style."""
 
 BENCHMARKS = [
-    {"label": "doxr", "seconds": 0.110, "bold": True},
+    {"label": "drefs", "seconds": 0.110, "bold": True},
     {"label": "mkdocs build --strict", "seconds": 51.0, "bold": False},
 ]
-
-CAPTION = None  # Caption is in the README, not the SVG
 
 
 def format_time(s: float) -> str:
@@ -30,8 +28,7 @@ def generate_svg(dark: bool) -> str:
     bar_gap = 28
     chart_height = len(BENCHMARKS) * (bar_height + bar_gap) - bar_gap + 10
     axis_height = 25
-    caption_height = 20 if CAPTION else 0
-    total_height = top_margin + chart_height + axis_height + caption_height
+    total_height = top_margin + chart_height + axis_height
 
     max_seconds = max(b["seconds"] for b in BENCHMARKS)
     # Round up to nice number for axis
@@ -91,12 +88,6 @@ def generate_svg(dark: bool) -> str:
         svg += f'{format_time(t)}</text>\n'
 
     svg += "  </g>\n"
-
-    if CAPTION:
-        svg += f'  <text x="{width / 2}" y="{total_height - 2}" text-anchor="middle" '
-        svg += f'font-family="{font}" font-size="11px" fill="{text_color}" opacity="0.6">'
-        svg += f'{CAPTION}</text>\n'
-
     svg += "</svg>\n"
     return svg
 
@@ -107,6 +98,6 @@ if __name__ == "__main__":
     out = pathlib.Path(__file__).parent.parent / "assets"
     out.mkdir(exist_ok=True)
 
-    (out / "benchmark-dark.svg").write_text(generate_svg(dark=True))
-    (out / "benchmark-light.svg").write_text(generate_svg(dark=False))
-    print("Generated assets/benchmark-dark.svg and assets/benchmark-light.svg")
+    (out / "benchmark-dark-v3.svg").write_text(generate_svg(dark=True))
+    (out / "benchmark-light-v3.svg").write_text(generate_svg(dark=False))
+    print("Generated benchmark SVGs")
