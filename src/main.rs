@@ -7,6 +7,7 @@ mod graph;
 mod inventory;
 mod lsp;
 mod parse;
+mod patterns;
 
 use anyhow::Result;
 use clap::{Parser as ClapParser, Subcommand};

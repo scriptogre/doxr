@@ -1,9 +1,12 @@
 /// Extract cross-references from docstring content.
 ///
-/// Supports MkDocs/mkdocstrings Markdown syntax and Sphinx RST syntax.
+/// Supports MkDocs/mkdocstrings Markdown syntax, Sphinx RST syntax,
+/// and Rust-style intra-doc links.
 use crate::config::DocStyle;
-use regex::Regex;
-use std::sync::LazyLock;
+use crate::patterns::{
+    MKDOCS_AUTOREF, MKDOCS_EXPLICIT, RUST_STYLE, SPHINX_XREF, is_fully_qualified,
+    should_skip_rust_style,
+};
 
 /// Whether a reference is fully qualified or a short name needing expansion.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,46 +29,8 @@ pub struct Reference {
 }
 
 // ---------------------------------------------------------------------------
-// MkDocs patterns
-// ---------------------------------------------------------------------------
-
-// [display text][identifier]
-static MKDOCS_EXPLICIT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[[^\]]*\]\[([a-zA-Z_][\w.]*)\]").unwrap());
-
-// [identifier][]  (autoref shorthand)
-static MKDOCS_AUTOREF: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[([a-zA-Z_][\w.]*)\]\[\]").unwrap());
-
-// ---------------------------------------------------------------------------
-// Sphinx patterns
-// ---------------------------------------------------------------------------
-
-// :role:`~optional.dotted.path`
-static SPHINX_XREF: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r":(class|func|meth|mod|attr|exc|data|obj|const|type):`~?([^`]+)`").unwrap()
-});
-
-// ---------------------------------------------------------------------------
-// doxr-native patterns (Rust-style intra-doc links)
-// ---------------------------------------------------------------------------
-
-// [identifier] or [`identifier`] — doxr-native (Rust-style intra-doc links).
-// Lookahead/lookbehind handled in code (regex crate doesn't support them).
-static DOXR_NATIVE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[`?([a-zA-Z_][\w.]*)`?\]").unwrap());
-
-// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
-
-/// Check if a reference looks like a fully-qualified Python path.
-///
-/// Must contain a dot and start with a lowercase letter or underscore
-/// (package names are lowercase; `ClassName.method` is a scoped ref, not FQN).
-fn is_fully_qualified(s: &str) -> bool {
-    s.contains('.') && s.starts_with(|c: char| c.is_ascii_lowercase() || c == '_')
-}
 
 /// Extract all cross-references from a docstring's content.
 pub fn extract_references(content: &str, style: &DocStyle) -> Vec<Reference> {
@@ -79,9 +44,9 @@ pub fn extract_references(content: &str, style: &DocStyle) -> Vec<Reference> {
         }
     };
 
-    // Always extract doxr-native refs, deduplicating against existing offsets.
+    // Always extract Rust-style refs, deduplicating against existing offsets.
     let existing_offsets: Vec<usize> = refs.iter().map(|r| r.offset).collect();
-    refs.extend(extract_native(content, &existing_offsets));
+    refs.extend(extract_rust_style(content, &existing_offsets));
 
     refs
 }
@@ -90,26 +55,26 @@ fn extract_mkdocs(content: &str) -> Vec<Reference> {
     let mut refs = Vec::new();
 
     for cap in MKDOCS_EXPLICIT.captures_iter(content) {
-        if let Some(m) = cap.get(1) {
-            if is_fully_qualified(m.as_str()) {
-                refs.push(Reference {
-                    target: m.as_str().to_string(),
-                    offset: m.start(),
-                    kind: ReferenceKind::FullyQualified,
-                });
-            }
+        if let Some(m) = cap.get(1)
+            && is_fully_qualified(m.as_str())
+        {
+            refs.push(Reference {
+                target: m.as_str().to_string(),
+                offset: m.start(),
+                kind: ReferenceKind::FullyQualified,
+            });
         }
     }
 
     for cap in MKDOCS_AUTOREF.captures_iter(content) {
-        if let Some(m) = cap.get(1) {
-            if is_fully_qualified(m.as_str()) {
-                refs.push(Reference {
-                    target: m.as_str().to_string(),
-                    offset: m.start(),
-                    kind: ReferenceKind::FullyQualified,
-                });
-            }
+        if let Some(m) = cap.get(1)
+            && is_fully_qualified(m.as_str())
+        {
+            refs.push(Reference {
+                target: m.as_str().to_string(),
+                offset: m.start(),
+                kind: ReferenceKind::FullyQualified,
+            });
         }
     }
 
@@ -137,28 +102,16 @@ fn extract_sphinx(content: &str) -> Vec<Reference> {
     refs
 }
 
-fn extract_native(content: &str, existing_offsets: &[usize]) -> Vec<Reference> {
+fn extract_rust_style(content: &str, existing_offsets: &[usize]) -> Vec<Reference> {
     let mut refs = Vec::new();
     let bytes = content.as_bytes();
 
-    for cap in DOXR_NATIVE.captures_iter(content) {
+    for cap in RUST_STYLE.captures_iter(content) {
         let full_match = cap.get(0).unwrap();
         let start = full_match.start();
         let end = full_match.end();
 
-        // Skip if preceded by:
-        // - \ (escaped)
-        // - ] (MkDocs [text][path] second part)
-        // - word char (subscript like AbstractBase[int], not a cross-reference)
-        if start > 0 {
-            let prev = bytes[start - 1];
-            if prev == b'\\' || prev == b']' || prev.is_ascii_alphanumeric() || prev == b'_' {
-                continue;
-            }
-        }
-
-        // Skip if followed by [ (MkDocs [path][] first part).
-        if end < bytes.len() && bytes[end] == b'[' {
+        if should_skip_rust_style(bytes, start, end) {
             continue;
         }
 
@@ -240,11 +193,11 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // doxr-native syntax tests
+    // Rust-style syntax tests
     // -----------------------------------------------------------------------
 
     #[test]
-    fn test_native_bare_brackets_fq() {
+    fn test_rust_style_bare_brackets_fq() {
         let content = r#"See [pkg.models.User] for details."#;
         let refs = extract_references(content, &DocStyle::Auto);
         assert_eq!(refs.len(), 1);
@@ -253,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_native_backtick_brackets_fq() {
+    fn test_rust_style_backtick_brackets_fq() {
         let content = "See [`pkg.models.User`] for details.";
         let refs = extract_references(content, &DocStyle::Auto);
         assert_eq!(refs.len(), 1);
@@ -262,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn test_native_short_name() {
+    fn test_rust_style_short_name() {
         let content = r#"See [User] for details."#;
         let refs = extract_references(content, &DocStyle::Auto);
         assert_eq!(refs.len(), 1);
@@ -271,7 +224,7 @@ mod tests {
     }
 
     #[test]
-    fn test_native_short_name_backticks() {
+    fn test_rust_style_short_name_backticks() {
         let content = "See [`User`] for details.";
         let refs = extract_references(content, &DocStyle::Auto);
         assert_eq!(refs.len(), 1);
@@ -280,14 +233,14 @@ mod tests {
     }
 
     #[test]
-    fn test_native_escaped_ignored() {
+    fn test_rust_style_escaped_ignored() {
         let content = r#"See \[User] for details."#;
         let refs = extract_references(content, &DocStyle::Auto);
         assert_eq!(refs.len(), 0);
     }
 
     #[test]
-    fn test_native_no_collision_with_mkdocs_explicit() {
+    fn test_rust_style_no_collision_with_mkdocs_explicit() {
         let content = r#"See [display text][pkg.models.User] for details."#;
         let refs = extract_references(content, &DocStyle::Mkdocs);
         assert_eq!(refs.len(), 1);
@@ -296,7 +249,7 @@ mod tests {
     }
 
     #[test]
-    fn test_native_no_collision_with_mkdocs_autoref() {
+    fn test_rust_style_no_collision_with_mkdocs_autoref() {
         let content = r#"See [pkg.models.User][] for details."#;
         let refs = extract_references(content, &DocStyle::Mkdocs);
         assert_eq!(refs.len(), 1);
@@ -305,14 +258,14 @@ mod tests {
     }
 
     #[test]
-    fn test_native_ignores_non_identifiers() {
+    fn test_rust_style_ignores_non_identifiers() {
         let content = r#"See [see above] and [1] and [some/path] for details."#;
         let refs = extract_references(content, &DocStyle::Auto);
         assert_eq!(refs.len(), 0);
     }
 
     #[test]
-    fn test_native_mixed_with_mkdocs_and_sphinx() {
+    fn test_rust_style_mixed_with_mkdocs_and_sphinx() {
         let content = r#"
     Native: [User]
     MkDocs: [text][pkg.models.Admin]
@@ -324,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    fn test_native_underscore_start() {
+    fn test_rust_style_underscore_start() {
         let content = r#"See [_private_func] for details."#;
         let refs = extract_references(content, &DocStyle::Auto);
         assert_eq!(refs.len(), 1);

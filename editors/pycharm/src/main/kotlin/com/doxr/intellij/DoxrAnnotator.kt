@@ -15,15 +15,6 @@ import java.util.regex.Pattern
  */
 class DoxrAnnotator : Annotator {
 
-    companion object {
-        private val MKDOCS_EXPLICIT = Pattern.compile("\\[[^\\]]*\\]\\[([a-zA-Z_][\\w.]*)\\]")
-        private val MKDOCS_AUTOREF = Pattern.compile("\\[([a-zA-Z_][\\w.]*)\\]\\[\\]")
-        private val SPHINX_XREF = Pattern.compile(
-            ":(class|func|meth|mod|attr|exc|data|obj|const|type):`~?([^`]+)`"
-        )
-        private val DOXR_NATIVE = Pattern.compile("\\[`?([a-zA-Z_][\\w.]*)`?\\]")
-    }
-
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         val stringLiteral = element as? PyStringLiteralExpression ?: return
         val text = stringLiteral.text
@@ -36,15 +27,15 @@ class DoxrAnnotator : Annotator {
         // Track offsets from MkDocs/Sphinx patterns for dedup.
         val existingOffsets = mutableSetOf<Int>()
 
-        collectOffsets(MKDOCS_EXPLICIT, content, 1, existingOffsets)
-        collectOffsets(MKDOCS_AUTOREF, content, 1, existingOffsets)
-        collectOffsets(SPHINX_XREF, content, 2, existingOffsets)
+        collectOffsets(DoxrPatterns.MKDOCS_EXPLICIT, content, 1, existingOffsets)
+        collectOffsets(DoxrPatterns.MKDOCS_AUTOREF, content, 1, existingOffsets)
+        collectOffsets(DoxrPatterns.SPHINX_XREF, content, 2, existingOffsets)
 
-        highlightRefs(MKDOCS_EXPLICIT, content, 1, contentOffset, elementOffset, holder)
-        highlightRefs(MKDOCS_AUTOREF, content, 1, contentOffset, elementOffset, holder)
-        highlightRefs(SPHINX_XREF, content, 2, contentOffset, elementOffset, holder)
+        highlightRefs(DoxrPatterns.MKDOCS_EXPLICIT, content, 1, contentOffset, elementOffset, holder)
+        highlightRefs(DoxrPatterns.MKDOCS_AUTOREF, content, 1, contentOffset, elementOffset, holder)
+        highlightRefs(DoxrPatterns.SPHINX_XREF, content, 2, contentOffset, elementOffset, holder)
 
-        highlightNativeRefs(content, contentOffset, elementOffset, existingOffsets, holder)
+        highlightRustStyleRefs(content, contentOffset, elementOffset, existingOffsets, holder)
     }
 
     private fun collectOffsets(
@@ -58,8 +49,7 @@ class DoxrAnnotator : Annotator {
             var path = matcher.group(group) ?: continue
             val tildeOffset = if (path.startsWith("~")) 1 else 0
             if (tildeOffset > 0) path = path.substring(1)
-            if (!path.contains('.')) continue
-            if (!path[0].isLowerCase() && path[0] != '_') continue
+            if (!DoxrPatterns.isFullyQualified(path)) continue
             out.add(matcher.start(group) + tildeOffset)
         }
     }
@@ -77,62 +67,26 @@ class DoxrAnnotator : Annotator {
             var path = matcher.group(group) ?: continue
             val tildeOffset = if (path.startsWith("~")) 1 else 0
             if (tildeOffset > 0) path = path.substring(1)
-            if (!path.contains('.')) continue
-            if (!path[0].isLowerCase() && path[0] != '_') continue
+            if (!DoxrPatterns.isFullyQualified(path)) continue
 
             val pathStart = matcher.start(group) + tildeOffset
-
-            // Highlight each segment as an identifier.
-            val segments = path.split('.')
-            var pos = pathStart
-            for (segment in segments) {
-                val absStart = elementOffset + contentOffset + pos
-                val absEnd = absStart + segment.length
-                val range = TextRange(absStart, absEnd)
-
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                    .range(range)
-                    .textAttributes(DefaultLanguageHighlighterColors.IDENTIFIER)
-                    .create()
-
-                pos += segment.length + 1 // +1 for dot
-            }
-
-            // Highlight dots as punctuation.
-            pos = pathStart
-            for (i in 0 until segments.size - 1) {
-                pos += segments[i].length
-                val dotStart = elementOffset + contentOffset + pos
-                holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                    .range(TextRange(dotStart, dotStart + 1))
-                    .textAttributes(DefaultLanguageHighlighterColors.DOT)
-                    .create()
-                pos += 1
-            }
+            highlightDottedPath(path, pathStart, contentOffset, elementOffset, holder)
         }
     }
 
-    private fun highlightNativeRefs(
+    private fun highlightRustStyleRefs(
         content: String,
         contentOffset: Int,
         elementOffset: Int,
         existingOffsets: Set<Int>,
         holder: AnnotationHolder,
     ) {
-        val matcher = DOXR_NATIVE.matcher(content)
+        val matcher = DoxrPatterns.RUST_STYLE.matcher(content)
         while (matcher.find()) {
             val start = matcher.start()
-
-            // Skip if preceded by \ (escaped), ] (MkDocs second bracket),
-            // or word char (subscript like AbstractBase[int]).
-            if (start > 0) {
-                val prev = content[start - 1]
-                if (prev == '\\' || prev == ']' || prev.isLetterOrDigit() || prev == '_') continue
-            }
-
-            // Skip if followed by [ (MkDocs [path][] first part).
             val end = matcher.end()
-            if (end < content.length && content[end] == '[') continue
+
+            if (DoxrPatterns.shouldSkipRustStyle(content, start, end)) continue
 
             val path = matcher.group(1) ?: continue
             val pathStart = matcher.start(1)
@@ -140,31 +94,8 @@ class DoxrAnnotator : Annotator {
             if (existingOffsets.contains(pathStart)) continue
 
             if (path.contains('.')) {
-                // FQ — must start with lowercase/underscore.
-                if (!path[0].isLowerCase() && path[0] != '_') continue
-
-                // Highlight each segment as identifier, dots as punctuation.
-                val segments = path.split('.')
-                var pos = pathStart
-                for (segment in segments) {
-                    val absStart = elementOffset + contentOffset + pos
-                    val absEnd = absStart + segment.length
-                    holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                        .range(TextRange(absStart, absEnd))
-                        .textAttributes(DefaultLanguageHighlighterColors.IDENTIFIER)
-                        .create()
-                    pos += segment.length + 1
-                }
-                pos = pathStart
-                for (i in 0 until segments.size - 1) {
-                    pos += segments[i].length
-                    val dotStart = elementOffset + contentOffset + pos
-                    holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-                        .range(TextRange(dotStart, dotStart + 1))
-                        .textAttributes(DefaultLanguageHighlighterColors.DOT)
-                        .create()
-                    pos += 1
-                }
+                if (!DoxrPatterns.isFullyQualified(path)) continue
+                highlightDottedPath(path, pathStart, contentOffset, elementOffset, holder)
             } else {
                 // Short name — single identifier highlight.
                 val absStart = elementOffset + contentOffset + pathStart
@@ -174,6 +105,40 @@ class DoxrAnnotator : Annotator {
                     .textAttributes(DefaultLanguageHighlighterColors.IDENTIFIER)
                     .create()
             }
+        }
+    }
+
+    private fun highlightDottedPath(
+        path: String,
+        pathStart: Int,
+        contentOffset: Int,
+        elementOffset: Int,
+        holder: AnnotationHolder,
+    ) {
+        val segments = path.split('.')
+
+        // Highlight each segment as an identifier.
+        var pos = pathStart
+        for (segment in segments) {
+            val absStart = elementOffset + contentOffset + pos
+            val absEnd = absStart + segment.length
+            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(absStart, absEnd))
+                .textAttributes(DefaultLanguageHighlighterColors.IDENTIFIER)
+                .create()
+            pos += segment.length + 1 // +1 for dot
+        }
+
+        // Highlight dots as punctuation.
+        pos = pathStart
+        for (i in 0 until segments.size - 1) {
+            pos += segments[i].length
+            val dotStart = elementOffset + contentOffset + pos
+            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(dotStart, dotStart + 1))
+                .textAttributes(DefaultLanguageHighlighterColors.DOT)
+                .create()
+            pos += 1
         }
     }
 }
