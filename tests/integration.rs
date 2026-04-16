@@ -3,6 +3,8 @@ use std::process::Command;
 fn run_drefs(fixture: &str) -> (String, String, i32) {
     let output = Command::new(env!("CARGO_BIN_EXE_drefs"))
         .arg(format!("tests/fixtures/{fixture}"))
+        .arg("--color")
+        .arg("never")
         .output()
         .expect("Failed to run drefs");
 

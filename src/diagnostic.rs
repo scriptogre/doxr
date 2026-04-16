@@ -1,8 +1,9 @@
-/// Diagnostics: validate docstring references and emit Ruff-format output.
+/// Diagnostics: validate docstring references and emit colored output.
 use crate::config::DrefsConfig;
 use crate::extract::{Reference, ReferenceKind, extract_references};
 use crate::graph::SymbolGraph;
 use crate::inventory::Inventory;
+use colored::Colorize;
 use std::path::Path;
 
 /// Maximum edit distance for "did you mean?" suggestions.
@@ -16,16 +17,63 @@ pub struct Diagnostic {
     pub col: usize,
     pub code: &'static str,
     pub message: String,
+    pub suggestion: Option<String>,
 }
 
-impl std::fmt::Display for Diagnostic {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}:{}:{}: {} {}",
-            self.file, self.line, self.col, self.code, self.message
-        )
+/// Format a diagnostic for terminal display with colors.
+pub fn format_diagnostic(d: &Diagnostic, project_root: &Path) -> String {
+    let rel_file = display_path(&d.file, project_root);
+    let location = format!("{}:{}:{}", rel_file, d.line, d.col);
+    let code = d.code.bold().bright_red();
+
+    let message = colorize_message(&d.message);
+
+    match &d.suggestion {
+        Some(s) => {
+            let help = format!("Did you mean `{}`?", s.bold());
+            format!(
+                "{}: {} {}\n  {} {}",
+                location.bold(),
+                code,
+                message,
+                "help:".bold().bright_cyan(),
+                help
+            )
+        }
+        None => format!("{}: {} {}", location.bold(), code, message),
     }
+}
+
+/// Colorize backtick-quoted symbols in a message string.
+fn colorize_message(message: &str) -> String {
+    let mut result = String::with_capacity(message.len());
+    let mut in_backtick = false;
+    let mut current = String::new();
+
+    for ch in message.chars() {
+        if ch == '`' {
+            if in_backtick {
+                // Closing backtick — emit the content as bold
+                result.push('`');
+                result.push_str(&current.bold().to_string());
+                result.push('`');
+                current.clear();
+            }
+            in_backtick = !in_backtick;
+        } else if in_backtick {
+            current.push(ch);
+        } else {
+            result.push(ch);
+        }
+    }
+
+    // Handle unclosed backtick
+    if in_backtick {
+        result.push('`');
+        result.push_str(&current);
+    }
+
+    result
 }
 
 /// Check all docstrings in the symbol graph and return diagnostics.
@@ -62,15 +110,13 @@ pub fn check(
                                     module,
                                     MAX_SUGGEST_DISTANCE,
                                 );
-                                let message = match suggestion {
-                                    Some(s) => format!(
-                                        "Unresolved docstring reference `{}`. Did you mean `{s}`?",
-                                        r.target
-                                    ),
-                                    None => format!(
+                                let message = if suggestion.is_some() {
+                                    format!("Unresolved docstring reference `{}`", r.target)
+                                } else {
+                                    format!(
                                         "Unresolved docstring reference `{}`. No import or definition found in this file",
                                         r.target
-                                    ),
+                                    )
                                 };
                                 diagnostics.push(Diagnostic {
                                     file: file_path.clone(),
@@ -78,6 +124,7 @@ pub fn check(
                                     col: docstring.col,
                                     code: "DREF001",
                                     message,
+                                    suggestion,
                                 });
                                 continue;
                             }
@@ -93,18 +140,13 @@ pub fn check(
                     // Internal ref: must resolve in our symbol graph.
                     if !graph.resolve(&target) {
                         let suggestion = graph.suggest(&target, MAX_SUGGEST_DISTANCE);
-                        let message = match suggestion {
-                            Some(s) => format!(
-                                "Unresolved docstring reference `{display_name}`. Did you mean `{s}`?"
-                            ),
-                            None => format!("Unresolved docstring reference `{display_name}`"),
-                        };
                         diagnostics.push(Diagnostic {
                             file: file_path.clone(),
                             line: docstring.line,
                             col: docstring.col,
                             code: "DREF001",
-                            message,
+                            message: format!("Unresolved docstring reference `{display_name}`"),
+                            suggestion,
                         });
                     }
                 } else if inventory.covers_root(&target) {
@@ -116,6 +158,7 @@ pub fn check(
                             col: docstring.col,
                             code: "DREF001",
                             message: format!("Unresolved docstring reference `{display_name}`"),
+                            suggestion: None,
                         });
                     }
                 }
@@ -167,8 +210,8 @@ fn expand_short_name(name: &str, module: &crate::graph::Module) -> Option<String
 pub fn summary(diagnostics: &[Diagnostic]) -> String {
     match diagnostics.len() {
         0 => "All references OK.".to_string(),
-        1 => "Found 1 error.".to_string(),
-        n => format!("Found {n} errors."),
+        1 => format!("{}", "Found 1 error.".bold()),
+        n => format!("{}", format!("Found {n} errors.").bold()),
     }
 }
 

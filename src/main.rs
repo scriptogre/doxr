@@ -19,7 +19,7 @@ use std::process;
 #[command(
     name = "drefs",
     version,
-    about = "A hyper-fast Python docstring cross-reference checker"
+    about = "An extremely fast Python docstring cross-reference checker, written in Rust."
 )]
 struct Cli {
     /// Project root directory to check (default: current directory).
@@ -41,10 +41,21 @@ struct Cli {
     /// Inventory files (objects.inv) to load — URLs or local paths.
     #[arg(long = "inventory", short = 'i')]
     inventories: Vec<String>,
+
+    /// Color output: auto, always, never.
+    #[arg(long, default_value = "auto")]
+    color: String,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // Configure color output.
+    match cli.color.as_str() {
+        "always" => colored::control::set_override(true),
+        "never" => colored::control::set_override(false),
+        _ => {} // "auto" — colored crate detects TTY automatically
+    }
 
     let project_root = cli.path.canonicalize().unwrap_or(cli.path.clone());
 
@@ -153,15 +164,14 @@ fn main() -> Result<()> {
     // 4. Check all docstrings against the graph + inventories.
     let diagnostics = diagnostic::check(&symbol_graph, &config, &inv, &file_map);
 
-    // 5. Print results in Ruff format.
+    // 5. Print results.
     for d in &diagnostics {
-        let rel_file = diagnostic::display_path(&d.file, &project_root);
-        println!(
-            "{}:{}:{}: {} {}",
-            rel_file, d.line, d.col, d.code, d.message
-        );
+        println!("{}", diagnostic::format_diagnostic(d, &project_root));
     }
 
+    if !diagnostics.is_empty() {
+        eprintln!();
+    }
     eprintln!("{}", diagnostic::summary(&diagnostics));
 
     if !diagnostics.is_empty() {

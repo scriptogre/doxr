@@ -7,6 +7,16 @@
 
 An extremely fast Python docstring cross-reference checker, written in Rust.
 
+```bash
+uvx drefs .
+```
+
+```
+src/models.py:12:5: DREF001 Unresolved docstring reference `pkg.mdoels.User`. Did you mean `pkg.models.User`?
+src/views.py:30:5: DREF001 Unresolved docstring reference `Nonexistent`. No import or definition found in this file
+Found 2 errors.
+```
+
 <p align="center">
   <picture align="center">
     <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-dark-v3.svg">
@@ -16,28 +26,16 @@ An extremely fast Python docstring cross-reference checker, written in Rust.
 </p>
 
 <p align="center">
-  <i>Validating cross-references in <a href="https://github.com/tinygrad/tinygrad">tinygrad</a> (697 Python files). <a href="BENCHMARKS.md">~460x faster.</a></i>
+  <i>Validating cross-references in <a href="https://github.com/tinygrad/tinygrad">tinygrad</a> (697 Python files). <a href="BENCHMARKS.md">~460x faster</a> than <code>mkdocs build --strict</code>.</i>
 </p>
-
-## Usage
-
-```bash
-uvx drefs .
-```
-
-```
-src/my_pkg/models.py:12:5: DREF001 Unresolved reference `my_pkg.old_module.Foo`
-src/my_pkg/views.py:45:9: DREF001 Unresolved reference `Nonexistent`
-Found 2 errors.
-```
-
-That's it.
 
 ## Supported syntax
 
-- MkDocs: `[text][pkg.mod.Class]`, `[pkg.mod.Class][]`
-- Sphinx: `` :class:`pkg.mod.Class` ``
-- Rust-style: `[Symbol]`, `` [`Symbol`] ``, `[pkg.mod.Class]`
+drefs auto-detects the syntax you use:
+
+- **MkDocs:** `[text][pkg.mod.Class]`, `[pkg.mod.Class][]`
+- **Sphinx:** `` :class:`pkg.mod.Class` ``, `` :func:`pkg.mod.func` ``
+- **Rust-style:** `[Symbol]`, `` [`Symbol`] ``, `[pkg.mod.Class]`
 
 `[User]` resolves via the current file's imports. `[pkg.models.User]` resolves directly. Escape with `\[not a ref\]`.
 
